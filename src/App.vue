@@ -38,14 +38,8 @@
     <!-- Single Image View -->
     <template v-if="!batchQueue.length">
       <div v-if="!imgLoaded && !isDragOver" class="title">
-        <div>SuperResolution in Your Browser</div>
-        <img
-          style="width: 50px; display: block; margin: auto; transform: translate(-18%, 0);"
-          src="/demo/2.png"
-          alt="favicon"
-          class="favicon"
-          @click="testdemo"
-        />
+        <div>Upscale Images Online</div>
+        
       </div>
       <canvas ref="canvas"></canvas>
       <button
