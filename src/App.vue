@@ -1515,6 +1515,11 @@ export default {
 <style>
 html, body, #app {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Add styles for batch processing UI */
@@ -2264,6 +2269,107 @@ html, body, #app {
   }
   .dragLine {
     width: 6px;
+  }
+}
+.canvas-container {
+  min-height: 100vh;
+  overflow-y: auto;
+}
+@media (max-width: 700px) {
+  .batch-header, .batch-options {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 4px 2vw;
+    margin-bottom: 6px;
+  }
+  .batch-header h2 {
+    font-size: 1em;
+    margin-bottom: 2px;
+  }
+  .batch-stats {
+    gap: 2px;
+    font-size: 0.8em;
+    flex-wrap: wrap;
+  }
+  .batch-actions {
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .batch-options .options-header {
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .options-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .option-group label {
+    font-size: 0.8em;
+  }
+  .styled-select {
+    font-size: 0.85em;
+    padding: 5px 6px;
+  }
+  .start-button {
+    padding: 7px 10px;
+    font-size: 0.9em;
+  }
+  .batch-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 0 2vw;
+  }
+  .batch-item {
+    border-radius: 5px;
+    margin-bottom: 2px;
+    padding: 4px 0;
+  }
+  .image-container {
+    aspect-ratio: 1;
+    min-width: 0;
+    min-height: 0;
+    max-width: 100%;
+  }
+  .item-info {
+    padding: 4px 0;
+    gap: 1px;
+  }
+  .filename {
+    font-size: 0.7em;
+    word-break: break-all;
+  }
+  .item-actions {
+    gap: 2px;
+  }
+  .action-button, .action-button.small {
+    padding: 4px 6px;
+    font-size: 0.7em;
+  }
+  .progress-ring {
+    width: 20px;
+    height: 20px;
+  }
+  .status-content {
+    font-size: 0.75em;
+  }
+  .floating-menu {
+    width: 99vw;
+    min-width: 0;
+    max-width: 99vw;
+    left: 0.5vw;
+    padding: 6px;
+  }
+  .goback, .github {
+    width: 28px;
+    height: 28px;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+  }
+  .dragLine {
+    width: 5px;
   }
 }
 </style>
