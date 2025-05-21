@@ -400,10 +400,8 @@
                           fill="none" 
                           stroke="currentColor" 
                           stroke-width="5"
-                          :style="{
-                            strokeDasharray: '125.6',
-                            strokeDashoffset: 125.6 - (125.6 * (item.progress || 0) / 100)
-                          }"
+                          :stroke-dasharray="circumference"
+                          :stroke-dashoffset="circumference - (circumference * (item.progress || 0) / 100)"
                         />
                       </svg>
                     </div>
@@ -521,6 +519,7 @@ export default {
       wasmModule: null,
       batchQueue: [], // Array of {file: File, status: 'pending'|'processing'|'done'|'error', result: Blob|null, progress: number}
       isProcessingBatch: false,
+      circumference: 2 * Math.PI * 20, // For r=20 in the progress ring
     };
   },
   watch: {
@@ -1515,7 +1514,7 @@ export default {
 
 <style>
 html, body, #app {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 }
 
 /* Add styles for batch processing UI */
@@ -2059,5 +2058,79 @@ html, body, #app {
 .action-button.small {
   padding: 6px 12px;
   font-size: 0.8em;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding-top: 60px;
+}
+.hero-title {
+  font-size: 2.5em;
+  font-weight: 800;
+  color: #4caf50;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.hero-subtitle {
+  font-size: 1.2em;
+  color: #333;
+  margin-bottom: 32px;
+  text-align: center;
+}
+.upload-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #ff568a;
+  border: none;
+  border-radius: 50%;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 24px;
+  transition: background 0.3s;
+}
+.upload-button:hover {
+  background-color: #d21d5a;
+}
+.upload-container {
+  width: 48px;
+  height: 48px;
+}
+.upload-text {
+  margin-top: 12px;
+  color: #fff;
+  font-size: 1em;
+  font-weight: 500;
+}
+.demo-section {
+  margin-top: 32px;
+  text-align: center;
+}
+.demo-title {
+  color: #888;
+  font-size: 1em;
+  margin-bottom: 8px;
+}
+.demo-images {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+.demoimg {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.demoimg:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 16px rgba(76,175,80,0.15);
 }
 </style>
