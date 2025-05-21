@@ -2133,4 +2133,137 @@ html, body, #app {
   transform: scale(1.08);
   box-shadow: 0 4px 16px rgba(76,175,80,0.15);
 }
+@media (max-width: 700px) {
+  .hero {
+    min-height: 30vh;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+  .hero-title {
+    font-size: 1.1em;
+    margin-bottom: 6px;
+  }
+  .hero-subtitle {
+    font-size: 0.95em;
+    margin-bottom: 12px;
+    padding: 0 8px;
+  }
+  .upload-button {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 12px;
+  }
+  .upload-container {
+    width: 24px;
+    height: 24px;
+  }
+  .upload-text {
+    font-size: 0.85em;
+    margin-top: 8px;
+  }
+  .demo-section {
+    margin-top: 12px;
+  }
+  .demo-title {
+    font-size: 0.9em;
+    margin-bottom: 4px;
+  }
+  .demoimg {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+  }
+  .batch-header, .batch-options {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 6px;
+    margin-bottom: 8px;
+  }
+  .batch-header h2 {
+    font-size: 1em;
+    margin-bottom: 4px;
+  }
+  .batch-stats {
+    gap: 4px;
+    font-size: 0.85em;
+  }
+  .batch-actions {
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .batch-options .options-header {
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .options-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .option-group label {
+    font-size: 0.85em;
+  }
+  .styled-select {
+    font-size: 0.9em;
+    padding: 6px 8px;
+  }
+  .start-button {
+    padding: 8px 12px;
+    font-size: 0.95em;
+  }
+  .batch-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .batch-item {
+    border-radius: 6px;
+    margin-bottom: 4px;
+  }
+  .image-container {
+    aspect-ratio: 1;
+    min-width: 0;
+    min-height: 0;
+    max-width: 100%;
+  }
+  .item-info {
+    padding: 6px;
+    gap: 2px;
+  }
+  .filename {
+    font-size: 0.75em;
+    word-break: break-all;
+  }
+  .item-actions {
+    gap: 4px;
+  }
+  .action-button, .action-button.small {
+    padding: 5px 8px;
+    font-size: 0.75em;
+  }
+  .progress-ring {
+    width: 24px;
+    height: 24px;
+  }
+  .status-content {
+    font-size: 0.8em;
+  }
+  .floating-menu {
+    width: 95vw;
+    min-width: 0;
+    max-width: 98vw;
+    left: 2.5vw;
+    padding: 10px;
+  }
+  .goback, .github {
+    width: 32px;
+    height: 32px;
+    top: 6px;
+    left: 6px;
+    right: 6px;
+  }
+  .dragLine {
+    width: 6px;
+  }
+}
 </style>
