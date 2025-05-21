@@ -1515,7 +1515,8 @@ export default {
 <style>
 html, body, #app {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  height: 100%;
+  height: auto;
+  min-height: 100vh;
   margin: 0;
   padding: 0;
   overflow-x: hidden;
@@ -2273,6 +2274,7 @@ html, body, #app {
 }
 .canvas-container {
   min-height: 100vh;
+  height: auto;
   overflow-y: auto;
 }
 @media (max-width: 700px) {
