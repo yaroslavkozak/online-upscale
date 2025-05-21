@@ -1,5 +1,7 @@
 # web-realesrgan
 
+**Developer:** [Yaroslav Kozak](https://github.com/yaroslavkozak)
+
 Run Real-ESRGAN/Real-CUGAN in the browser with tensorflow.js
 
 ## Usage
@@ -8,11 +10,6 @@ Drag in or select an image, then choose a model and WebGPU/WebGL to upscale the 
 
 Sure, PNG with alpha channel is supported.
 
-### Online Demo
-
-[https://cappuccino.moe](https://cappuccino.moe)
-
-![demo](./src/assets/demo.jpg)
 
 ### Accelaration
 
@@ -27,7 +24,7 @@ All models are quantized to FP16, which reduces the size of the model download a
 
 ### ⚠️️ Limitations
 
-**Performance Gap**: Even with WebGPU enabled, the performance of running models in the browser is slower than running them locally. WebGPU’s speed is approximately half of the speed you’d achieve with local execution. On local devices, FP16 computation provides significant acceleration, whereas in tfjs-webgpu for now, FP16 and FP32 run at the same speed.
+**Performance Gap**: Even with WebGPU enabled, the performance of running models in the browser is slower than running them locally. WebGPU's speed is approximately half of the speed you'd achieve with local execution. On local devices, FP16 computation provides significant acceleration, whereas in tfjs-webgpu for now, FP16 and FP32 run at the same speed.
 
 If you need to upscale a lot of images, it is recommended to download and use the official Real-ESRGAN and Real-CUGAN repositories for local execution.
 

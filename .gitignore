@@ -1,29 +1,39 @@
+# Node
+node_modules/
+
+# Vite build output
+dist/
+
 # Logs
-logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Local env
+.env
+.env.*
+
+# MacOS
+.DS_Store
+
+# VSCode
+.vscode/
+
+# Optional: test coverage
+coverage/
+
+# Optional: system files
+Thumbs.db
+
+# Logs
+logs
+*.log
 pnpm-debug.log*
 lerna-debug.log*
 lib
 # demo
 # realesrgan
 *.ttf
-.vscode
-node_modules
-.DS_Store
-dist
-dist-ssr
-coverage
-*.local
-
-/cypress/videos/
-/cypress/screenshots/
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
 .idea
 *.suo
 *.ntvs*
@@ -34,3 +44,9 @@ coverage
 *.tsbuildinfo
 realesrgan
 realcugan
+
+/cypress/videos/
+/cypress/screenshots/
+
+# Editor directories and files
+!.vscode/extensions.json
