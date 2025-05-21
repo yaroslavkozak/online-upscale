@@ -1515,12 +1515,350 @@ export default {
 <style>
 html, body, #app {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  height: auto;
   min-height: 100vh;
+  height: auto;
   margin: 0;
   padding: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.canvas-container {
+  min-height: 100vh;
+  height: auto;
+  overflow-y: auto;
+  padding-bottom: 80px;
+  touch-action: pan-y;
+  box-sizing: border-box;
+  position: relative;
+  background-color: #ffffff;
+  background-image: linear-gradient(45deg, #f3f3f3 25%, transparent 25%, transparent 75%, #f3f3f3 75%, #f3f3f3),
+    linear-gradient(45deg, #f3f3f3 25%, #ffffff 25%, #ffffff 75%, #f3f3f3 75%, #f3f3f3);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+  transition: all 0.5s ease;
+}
+
+.canvas-container.dark {
+  background-color: #313131;
+  background-image: linear-gradient(45deg, #333333 25%, transparent 25%, transparent 75%, #333333 75%, #333333),
+    linear-gradient(45deg, #333333 25%, #313131 25%, #313131 75%, #333333 75%, #333333);
+}
+
+.title {
+  position: fixed;
+  top: 6%;
+  left: 50%;
+  width: 90%;
+  max-width: 600px;
+  transform: translate(-50%, 0%);
+  text-align: center;
+  color: rgb(200, 60, 90);
+  font-size: clamp(24px, 5vw, 32px);
+  font-weight: 700;
+  margin: 10px;
+  z-index: 5;
+}
+
+.upload-button {
+  background-color: #ff568a;
+  border: none;
+  border-radius: 50%;
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  z-index: 10;
+  width: clamp(120px, 30vw, 200px);
+  height: clamp(120px, 30vw, 200px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.upload-button:hover {
+  background-color: #d21d5a;
+  transform: translate(-50%, -60%) scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.upload-container {
+  width: clamp(48px, 12vw, 100px);
+  height: clamp(48px, 12vw, 100px);
+}
+
+.floating-menu {
+  position: fixed;
+  background-color: rgba(29, 29, 29, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  color: white;
+  width: min(90vw, 400px);
+  padding: 20px;
+  bottom: 25px;
+  left: 50%;
+  transform: translate(-50%, 0%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.opt {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.description {
+  display: block;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 4px;
+  font-size: 0.9em;
+}
+
+select {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 0.95em;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  transition: all 0.3s ease;
+}
+
+select:focus {
+  outline: none;
+  border-color: #4CAF50;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.run-button, .save-button, .question-button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  padding: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.run-button {
+  background-color: #1d90ee;
+}
+
+.save-button {
+  background-color: #4CAF50;
+}
+
+.question-button {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.run-button:hover, .save-button:hover, .question-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.goback, .github {
+  position: fixed;
+  top: 20px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  border: none;
+  border-radius: 50%;
+  padding: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.goback {
+  left: 20px;
+  background-color: #d21d5a;
+}
+
+.github {
+  right: 20px;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.goback:hover, .github:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dragLine {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 4px;
+  transform: translate(-100%, 0);
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: ew-resize;
+  z-index: 5;
+}
+
+.dragBall {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background-color: rgba(0, 0, 0, 0.9);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 700px) {
+  .title {
+    top: 4%;
+    font-size: clamp(20px, 6vw, 28px);
+  }
+
+  .upload-button {
+    top: 35%;
+    width: clamp(100px, 40vw, 150px);
+    height: clamp(100px, 40vw, 150px);
+  }
+
+  .upload-container {
+    width: clamp(40px, 16vw, 60px);
+    height: clamp(40px, 16vw, 60px);
+  }
+
+  .floating-menu {
+    width: 95vw;
+    padding: 15px;
+    bottom: 15px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .opt {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  select {
+    font-size: 0.9em;
+    padding: 6px 10px;
+  }
+
+  .run-button, .save-button, .question-button {
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+  }
+
+  .goback, .github {
+    top: 15px;
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+  }
+
+  .goback {
+    left: 15px;
+  }
+
+  .github {
+    right: 15px;
+  }
+
+  .dragLine {
+    width: 3px;
+  }
+
+  .dragBall {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 400px) {
+  .title {
+    top: 3%;
+    font-size: clamp(18px, 7vw, 24px);
+  }
+
+  .upload-button {
+    top: 30%;
+    width: clamp(80px, 45vw, 120px);
+    height: clamp(80px, 45vw, 120px);
+  }
+
+  .upload-container {
+    width: clamp(32px, 18vw, 48px);
+    height: clamp(32px, 18vw, 48px);
+  }
+
+  .floating-menu {
+    width: 98vw;
+    padding: 12px;
+    bottom: 10px;
+  }
+
+  .opt {
+    gap: 8px;
+  }
+
+  select {
+    font-size: 0.85em;
+    padding: 5px 8px;
+  }
+
+  .run-button, .save-button, .question-button {
+    width: 32px;
+    height: 32px;
+    padding: 5px;
+  }
+
+  .goback, .github {
+    top: 10px;
+    width: 32px;
+    height: 32px;
+    padding: 5px;
+  }
+
+  .goback {
+    left: 10px;
+  }
+
+  .github {
+    right: 10px;
+  }
+
+  .dragLine {
+    width: 2px;
+  }
+
+  .dragBall {
+    width: 28px;
+    height: 28px;
+  }
 }
 
 /* Add styles for batch processing UI */
@@ -2087,32 +2425,6 @@ html, body, #app {
   margin-bottom: 32px;
   text-align: center;
 }
-.upload-button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: #ff568a;
-  border: none;
-  border-radius: 50%;
-  width: 120px;
-  height: 120px;
-  margin-bottom: 24px;
-  transition: background 0.3s;
-}
-.upload-button:hover {
-  background-color: #d21d5a;
-}
-.upload-container {
-  width: 48px;
-  height: 48px;
-}
-.upload-text {
-  margin-top: 12px;
-  color: #fff;
-  font-size: 1em;
-  font-weight: 500;
-}
 .demo-section {
   margin-top: 32px;
   text-align: center;
@@ -2272,106 +2584,35 @@ html, body, #app {
     width: 6px;
   }
 }
-.canvas-container {
-  min-height: 100vh;
-  height: auto;
-  overflow-y: auto;
+.bottom-svg {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 12px 12px 0 0;
+  z-index: 1;
 }
-@media (max-width: 700px) {
-  .batch-header, .batch-options {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 4px 2vw;
-    margin-bottom: 6px;
-  }
-  .batch-header h2 {
-    font-size: 1em;
-    margin-bottom: 2px;
-  }
-  .batch-stats {
-    gap: 2px;
-    font-size: 0.8em;
-    flex-wrap: wrap;
-  }
-  .batch-actions {
-    flex-direction: column;
-    gap: 4px;
-    margin-top: 4px;
-  }
-  .batch-options .options-header {
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 4px;
-  }
-  .options-grid {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-  .option-group label {
-    font-size: 0.8em;
-  }
-  .styled-select {
-    font-size: 0.85em;
-    padding: 5px 6px;
-  }
-  .start-button {
-    padding: 7px 10px;
-    font-size: 0.9em;
-  }
-  .batch-grid {
-    grid-template-columns: 1fr;
-    gap: 6px;
-    padding: 0 2vw;
-  }
-  .batch-item {
-    border-radius: 5px;
-    margin-bottom: 2px;
-    padding: 4px 0;
-  }
-  .image-container {
-    aspect-ratio: 1;
-    min-width: 0;
-    min-height: 0;
-    max-width: 100%;
-  }
-  .item-info {
-    padding: 4px 0;
-    gap: 1px;
-  }
-  .filename {
-    font-size: 0.7em;
-    word-break: break-all;
-  }
-  .item-actions {
-    gap: 2px;
-  }
-  .action-button, .action-button.small {
-    padding: 4px 6px;
-    font-size: 0.7em;
-  }
-  .progress-ring {
-    width: 20px;
-    height: 20px;
-  }
-  .status-content {
-    font-size: 0.75em;
-  }
-  .floating-menu {
-    width: 99vw;
-    min-width: 0;
-    max-width: 99vw;
-    left: 0.5vw;
-    padding: 6px;
-  }
-  .goback, .github {
-    width: 28px;
-    height: 28px;
-    top: 4px;
-    left: 4px;
-    right: 4px;
-  }
-  .dragLine {
-    width: 5px;
-  }
+.bottom-svg svg {
+  width: 100%;
+  height: auto;
+}
+.bottom-svg .demo {
+  text-align: center;
+  color: white;
+  font-size: 0.9em;
+}
+.bottom-svg .demo .demoimg {
+  width: 64px;
+  height: 64px;
+  margin: 0 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.bottom-svg .demo .demoimg:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 16px rgba(76,175,80,0.15);
 }
 </style>
