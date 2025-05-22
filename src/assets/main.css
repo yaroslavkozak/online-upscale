@@ -83,16 +83,18 @@ canvas {
 }
 .title {
   position: fixed;
-  top: 6%;
+  top: 3%;
   left: 50%;
   width: 80%;
   transform: translate(-50%, 0%);
   text-align: center;
   color: rgb(200, 60, 90);
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 92px;
+  font-weight: 900;
   font-style: normal; /* font-weight: 900;font-style: normal; */
   margin: 10px;
+  line-height: 1em !important;
+  padding:0px; 
 }
 
 .upload-button {
