@@ -390,6 +390,7 @@
                :class="item.status">
             <div class="image-container">
               <img :src="item.preview" class="preview-image" />
+              <div class="image-dark-overlay"></div>
               <div class="status-overlay">
                 <div class="status-content">
                   <div v-if="item.status === 'processing'" class="progress-container">
@@ -411,22 +412,22 @@
                   </div>
                   <span class="status-text">{{ item.status }}</span>
                   <span v-if="item.error" class="error-message">{{ item.error }}</span>
+                  <button 
+                    v-if="item.status === 'done'" 
+                    @click="downloadSingle(item)"
+                    class="action-button small download-overlay-btn"
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16">
+                      <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                    </svg>
+                    Download
+                  </button>
                 </div>
               </div>
             </div>
             <div class="item-info">
-              <span class="filename">{{ item.file.name }}</span>
+              <!-- <span class="filename">{{ item.file.name }}</span> -->
               <div class="item-actions">
-                <button 
-                  v-if="item.status === 'done'" 
-                  @click="downloadSingle(item)"
-                  class="action-button small"
-                >
-                  <svg viewBox="0 0 24 24" width="16" height="16">
-                    <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-                  </svg>
-                  Download
-                </button>
                 <button 
                   v-if="item.status === 'error'" 
                   @click="retryItem(item)"
@@ -1122,11 +1123,18 @@ export default {
             quality
           );
           this.processedImg.onload = () => {
+            if (!this.processedImg.width || !this.processedImg.height) {
+              console.error('Processed image failed to load or is invalid.');
+              return;
+            }
             this.linePosition = this.$refs.canvas.width * 0.5;
-            this.$refs.dragLine.style.left =
-              this.linePosition / this.dpr + "px";
+            this.$refs.dragLine.style.left = this.linePosition / this.dpr + "px";
             this.drawImage();
             this.info = "Done! Time used: " + (Date.now() - start) / 1000 + "s";
+            this.isDone = true;
+          };
+          this.processedImg.onerror = () => {
+            console.error('Processed image failed to load.');
           };
           this.isProcessing = false;
           this.isDone = true;
@@ -1649,23 +1657,33 @@ html, body, #app {
 }
 
 .batch-item {
+  position: relative;
   display: flex;
-  align-items: center;
-  margin-bottom: 10px;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 220px;
+  aspect-ratio: 1/1;
+  padding: 0;
 }
 
 .image-container {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  border-radius: 4px;
-  overflow: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
 }
 
 .preview-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  display: block;
 }
 
 .status-overlay {
@@ -1674,12 +1692,22 @@ html, body, #app {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 0.9em;
+  z-index: 2;
+}
+
+.item-info {
+  position: relative;
+  z-index: 3;
+  background: none;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .status-overlay.processing {
@@ -2038,7 +2066,7 @@ html, body, #app {
 }
 
 .item-info {
-  padding: 12px;
+  padding: 0px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -2267,5 +2295,32 @@ html, body, #app {
   .dragLine {
     width: 6px;
   }
+}
+
+/* Add this to the style section */
+.image-dark-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.25);
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Add to style section */
+.download-overlay-btn {
+  margin-top: 8px;
+  background: #fff;
+  color: #222;
+  font-weight: 500;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: background 0.2s;
+}
+.download-overlay-btn:hover {
+  background: #e0e0e0;
 }
 </style>
