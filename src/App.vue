@@ -260,7 +260,7 @@
     </template>
 
     <!-- Batch Processing View -->
-    <template v-else>
+    <template v-if="!compareItem">
       <div class="batch-container">
         <!-- Header Section -->
         <div class="batch-header">
@@ -422,6 +422,7 @@
                     </svg>
                     Download
                   </button>
+                  <button v-if="item.status === 'done'" @click="compareBatchItem(item)" class="action-button small compare-btn">Compare</button>
                 </div>
               </div>
             </div>
@@ -440,6 +441,30 @@
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Single image comparison view for compareItem -->
+    <template v-if="compareItem">
+      <div class="single-compare-view">
+        <button class="goback" @click="compareItem = null">
+          <svg width="24" height="24" viewBox="0 0 1024 1024">
+            <g fill="rgba(255, 255, 255, 1)" stroke-width="50" stroke="rgba(255, 255, 255, 1)">
+              <path d="M511.4 175.3l-31.6 31.6-74.8 74.8-87.7 87.7-71.5 71.5-20.1 20.1c-7.1 7.1-13.9 14.3-18.1 23.7-11.2 25.4-6 53.9 13.6 73.7l13.2 13.2 62.7 62.7 86.8 86.8 80.8 80.8 44.7 44.7 2.1 2.1c6.7 6.7 18.9 7.2 25.5 0 6.6-7.2 7.1-18.3 0-25.5l-30.9-30.9-73.8-73.8-87.1-87.1-71.7-71.7-21.1-21.1-5.3-5.3-1.1-1.1-0.1-0.1c-0.3-0.3-3.9-4.4-2.4-2.6 1.3 1.7-0.1-0.2-0.3-0.5-0.8-1.2-1.5-2.4-2.2-3.6-0.3-0.6-0.7-1.2-1-1.9-0.3-0.6-1.3-3.3-0.5-1 0.7 2.3-0.7-2.4-0.9-3.1-0.4-1.4-1.7-6-0.7-2-0.5-1.9-0.3-4.2-0.3-6.2 0-0.1 0.3-4.8 0.3-4.8 0.5 0.1-0.7 3.6 0 0.7l0.6-2.7c0.3-1.2 2.3-6.2 0.5-2.2 0.8-1.7 1.6-3.4 2.6-5 0.6-0.9 4-5.1 1.3-2.2 1-1.1 1.9-2.2 3-3.3l0.2-0.2 1.2-1.2 14.3-14.3 63.6-63.6 86-86 79.8-79.8 44-44 2.1-2.1c6.7-6.7 7.2-18.9 0-25.5-7.4-6.3-18.6-6.8-25.7 0.3z"></path>
+              <path d="M804.6 494H432.9c-17.2 0-34.5-0.5-51.7 0h-0.7c-9.4 0-18.4 8.3-18 18 0.4 9.8 7.9 18 18 18h371.7c17.2 0 34.5 0.5 51.7 0h0.7c9.4 0 18.4-8.3 18-18-0.5-9.8-8-18-18-18z"></path>
+            </g>
+          </svg>
+        </button>
+        <!-- Comparison slider and dragLine for compareItem -->
+        <canvas ref="canvas"></canvas>
+        <div class="dragLine" ref="dragLine" v-show="isDone" @mousedown.stop="startDraggingLine" @mousemove.stop="dragLine">
+          <div class="dragBall">
+            <svg width="30" viewBox="0 0 27 20">
+              <path fill="#ff3484" d="M9.6 0L0 9.6l9.6 9.6z"></path>
+              <path fill="#5fb3e5" d="M17 19.2l9.5-9.6L16.9 0z"></path>
+            </svg>
           </div>
         </div>
       </div>
@@ -523,6 +548,7 @@ export default {
       batchQueue: [], // Array of {file: File, status: 'pending'|'processing'|'done'|'error', result: Blob|null, progress: number}
       isProcessingBatch: false,
       circumference: 2 * Math.PI * 20, // For r=20 in the progress ring
+      compareItem: null,
     };
   },
   watch: {
@@ -1417,22 +1443,25 @@ export default {
         a.download = item.file.name.replace(/\.[^/.]+$/, '') + '_upscaled' + (this.hasAlpha ? '.png' : '.jpg');
         a.click();
         URL.revokeObjectURL(a.href);
+      } else {
+        console.error('No result blob found for this item.');
       }
     },
     async downloadAll() {
       const zip = new JSZip();
-      
-      // Add all processed images to zip
+      let hasAny = false;
       for (const item of this.batchQueue) {
         if (item.status === 'done' && item.result) {
           zip.file(
             item.file.name.replace(/\.[^/.]+$/, '') + '_upscaled' + (this.hasAlpha ? '.png' : '.jpg'),
             item.result
           );
+          hasAny = true;
+        } else if (item.status === 'done') {
+          console.error('No result blob found for item:', item.file.name);
         }
       }
-      
-      // Generate and download zip
+      if (!hasAny) return;
       const content = await zip.generateAsync({type: 'blob'});
       const url = URL.createObjectURL(content);
       const a = document.createElement('a');
@@ -1517,7 +1546,51 @@ export default {
       // Implement the logic to create a preview image from the file
       // This is a placeholder and should be replaced with the actual implementation
       return URL.createObjectURL(file);
-    }
+    },
+    async compareBatchItem(item) {
+      // Load original image
+      const fileUrl = URL.createObjectURL(item.file);
+      this.img = new Image();
+      await new Promise((resolve) => {
+        this.img.onload = resolve;
+        this.img.src = fileUrl;
+      });
+      // Load upscaled image
+      this.processedImg = new Image();
+      await new Promise((resolve) => {
+        this.processedImg.onload = resolve;
+        this.processedImg.src = URL.createObjectURL(item.result);
+      });
+      // Set up state as in single upload mode
+      this.imgLoaded = true;
+      this.isDone = true;
+      this.compareItem = item;
+      // Center and fit image, enable zoom/pan
+      this.$nextTick(() => {
+        // Canvas and container
+        const container = this.$refs.canvasContainer;
+        const canvas = this.$refs.canvas;
+        // Set canvas size
+        canvas.width = container.offsetWidth * this.dpr;
+        canvas.height = container.offsetHeight * this.dpr;
+        canvas.style.width = `${container.offsetWidth}px`;
+        canvas.style.height = `${container.offsetHeight}px`;
+        // Calculate scale to fit
+        const scaleX = (0.8 * canvas.width) / this.img.width;
+        const scaleY = (0.8 * canvas.height) / this.img.height;
+        this.imgScale = Math.min(scaleX, scaleY, 4);
+        this.imgInitScale = this.imgScale;
+        // Center image
+        this.imgX = (canvas.width - this.img.width * this.imgScale) / 2;
+        this.imgY = (canvas.height - this.img.height * this.imgScale) * 0.4;
+        // Set slider position
+        this.linePosition = canvas.width * 0.5;
+        if (this.$refs.dragLine) {
+          this.$refs.dragLine.style.left = this.linePosition / this.dpr + "px";
+        }
+        this.drawImage();
+      });
+    },
   },
 };
 </script>
@@ -1970,6 +2043,8 @@ html, body, #app {
 }
 
 .batch-grid {
+  max-height: 60vh;
+  overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 20px;
@@ -2322,5 +2397,24 @@ html, body, #app {
 }
 .download-overlay-btn:hover {
   background: #e0e0e0;
+}
+
+.compare-btn {
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.compare-btn:hover {
+  background: #1976D2;
+}
+
+.compare-btn:disabled {
+  background: #666;
+  cursor: not-allowed;
 }
 </style>
