@@ -1,0 +1,53 @@
+{
+  "realesrgan": {
+    "model": [
+      "anime_fast",
+      "anime_plus",
+      "general_fast",
+      "general_plus"
+    ],
+    "factor": [
+      4
+    ],
+    "tile_size": [
+      32,
+      48,
+      64,
+      96,
+      128,
+      192,
+      256
+    ]
+  },
+  "realcugan": {
+    "factor": [
+      2,
+      4
+    ],
+    "denoise": {
+      "2": [
+        "conservative",
+        "no-denoise",
+        "denoise1x",
+        "denoise2x",
+        "denoise3x"
+      ],
+      "4": [
+        "conservative",
+        "no-denoise",
+        "denoise3x"
+      ]
+    },
+    "tile_size": [
+      32,
+      48,
+      64,
+      96,
+      128,
+      192,
+      256,
+      384,
+      512
+    ]
+  }
+}
