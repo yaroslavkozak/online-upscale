@@ -42,8 +42,7 @@ lib
 *.sw?
 
 *.tsbuildinfo
-realesrgan
-realcugan
+
 
 /cypress/videos/
 /cypress/screenshots/
