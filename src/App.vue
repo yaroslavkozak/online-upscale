@@ -1,3 +1,4 @@
+
 <!--
   Developed by Yaroslav Kozak
   https://github.com/yaroslavkozak
@@ -387,9 +388,15 @@
           <div v-for="(item, index) in batchQueue" 
                :key="index" 
                class="batch-item"
-               :class="item.status">
+               :class="item.status"
+               :data-index="item.index">
             <div class="image-container">
-              <img :src="item.previewUrl" class="preview-image" />
+              <img v-if="item.previewUrl" 
+                   :src="item.previewUrl" 
+                   class="preview-image" />
+              <div v-else class="preview-placeholder">
+                <div class="loading-spinner"></div>
+              </div>
               <div class="image-dark-overlay"></div>
               <div class="status-overlay">
                 <div class="status-content">
@@ -422,7 +429,6 @@
               </div>
             </div>
             <div class="item-info">
-              <!-- <span class="filename">{{ item.file.name }}</span> -->
               <div class="item-actions">
                 <button 
                   v-if="item.status === 'error'" 
@@ -464,6 +470,121 @@
         </div>
       </div>
     </template>
+
+    <!-- BATCH MODE DESKTOP -->
+
+    <!-- BATCH MODE MOBILE -->
+    <div v-if="batchQueue.length > 0 && !compareItem && isMobile" class="batch-container-mobile" style="overflow-y:auto; max-height:100vh;">
+      <div class="batch-header-mobile">
+        <h2>Batch Processing</h2>
+        <div class="batch-stats-mobile">
+          <div class="stat-item-mobile">
+            <span class="stat-value">{{ batchQueue.length }}</span>
+            <span class="stat-label">Total</span>
+          </div>
+          <div class="stat-item-mobile">
+            <span class="stat-value">{{ completedCount }}</span>
+            <span class="stat-label">Done</span>
+          </div>
+          <div class="stat-item-mobile">
+            <span class="stat-value">{{ processingCount }}</span>
+            <span class="stat-label">Processing</span>
+          </div>
+          <div class="stat-item-mobile">
+            <span class="stat-value">{{ failedCount }}</span>
+            <span class="stat-label">Failed</span>
+          </div>
+        </div>
+        <div class="header-actions-mobile">
+          <button @click="downloadAll" :disabled="!hasCompletedItems" class="action-button-mobile primary">
+            Download All
+          </button>
+          <button @click="clearQueue" class="action-button-mobile secondary">
+            Clear Queue
+          </button>
+        </div>
+      </div>
+      <div class="batch-options-mobile">
+        <div class="options-header-mobile">
+          <h3>Upscaling Settings</h3>
+          <button 
+            @click="startBatchProcessing" 
+            class="start-button-mobile"
+            :disabled="isProcessingBatch || !batchQueue.length"
+          >
+            {{ isProcessingBatch ? 'Processing...' : 'Start Processing' }}
+          </button>
+        </div>
+        <div class="options-grid-mobile">
+          <div class="option-group-mobile">
+            <label>Type</label>
+            <select v-model="model_type" class="styled-select-mobile">
+              <option value="realesrgan">Real-ESRGAN</option>
+              <option value="realcugan">Real-CUGAN</option>
+            </select>
+          </div>
+          <div v-if="model_type === 'realesrgan'" class="option-group-mobile">
+            <label>Model</label>
+            <select v-model="model" class="styled-select-mobile">
+              <option v-for="modelOption in model_config.realesrgan.model" :key="modelOption" :value="modelOption">
+                {{ modelOption }}
+              </option>
+            </select>
+          </div>
+          <div v-else-if="model_type === 'realcugan'" class="option-group-mobile">
+            <label>Denoise</label>
+            <select v-model="denoise" class="styled-select-mobile">
+              <option v-for="denoiseOption in model_config.realcugan.denoise[factor]" :key="denoiseOption" :value="denoiseOption">
+                {{ denoiseOption }}
+              </option>
+            </select>
+          </div>
+          <div class="option-group-mobile">
+            <label>Scale</label>
+            <select v-model="factor" class="styled-select-mobile">
+              <option v-for="factorOption in model_config[model_type].factor" :key="factorOption" :value="factorOption">
+                {{ factorOption }}x
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="batch-grid-mobile">
+        <div
+          v-for="(item, index) in batchQueue"
+          :key="index"
+          class="batch-item-mobile"
+          :class="item.status"
+          :data-index="item.index"
+        >
+          <div class="image-container-mobile">
+            <img v-if="item.previewUrl" :src="item.previewUrl" class="preview-image-mobile" />
+            <div v-else class="preview-placeholder-mobile">
+              <div class="loading-spinner-mobile"></div>
+            </div>
+            <div class="image-dark-overlay-mobile"></div>
+            <div class="status-overlay-mobile">
+              <div class="status-content-mobile">
+                <div v-if="item.status === 'processing'" class="progress-container-mobile">
+                  <span class="progress-text-mobile">{{ Math.round(item.progress || 0) }}%</span>
+                </div>
+                <span class="status-text-mobile">{{ item.status }}</span>
+                <span v-if="item.error" class="error-message-mobile">{{ item.error }}</span>
+                <div v-if="item.status === 'done'" class="status-actions-mobile">
+                  <button @click="downloadSingle(item)" class="action-button-mobile small download-overlay-btn-mobile">Download</button>
+                  <button @click="compareBatchItem(item)" class="action-button-mobile small compare-btn-mobile">Compare</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="item-info-mobile">
+            <div class="item-actions-mobile">
+              <button v-if="item.status === 'error'" @click="retryItem(item)" class="action-button-mobile small">Retry</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -549,6 +670,8 @@ export default {
       compareItem: null,
       compareOriginalImg: null,
       compareUpscaledImg: null,
+      observer: null,
+      visibleItems: new Set(),
     };
   },
   watch: {
@@ -640,7 +763,10 @@ export default {
     },
     failedCount() {
       return this.batchQueue.filter(item => item.status === 'error').length;
-    }
+    },
+    isMobile() {
+      return window.innerWidth <= 768;
+    },
   },
   mounted() {
     this.model_type = localStorage.getItem("model_type") || "realcugan";
@@ -657,11 +783,15 @@ export default {
     (async () => {
       await Module();
     })();
+    this.initializeIntersectionObserver();
   },
   beforeDestroy() {
     window.removeEventListener("resize", this.handleResize);
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
+    }
+    if (this.observer) {
+      this.observer.disconnect();
     }
   },
   methods: {
@@ -1338,19 +1468,29 @@ export default {
       input.click();
     },
     async addToBatchQueue(files) {
-      const newItems = await Promise.all(files.map(async file => {
-        const previewUrl = await this.createPreview(file);
+      const newItems = await Promise.all(files.map(async (file, index) => {
         return {
           file,
-          preview: previewUrl, // for backward compatibility
-          previewUrl,          // for revocation and display
+          preview: null,
+          previewUrl: null,
           status: 'pending',
           result: null,
           error: null,
-          progress: 0
+          progress: 0,
+          index: this.batchQueue.length + index
         };
       }));
       this.batchQueue.push(...newItems);
+      
+      // Observe new items after they're rendered
+      this.$nextTick(() => {
+        newItems.forEach(item => {
+          const element = document.querySelector(`[data-index="${item.index}"]`);
+          if (element) {
+            this.observer.observe(element);
+          }
+        });
+      });
     },
     async startBatchProcessing() {
       if (this.isProcessingBatch) return;
@@ -1651,14 +1791,24 @@ export default {
       URL.revokeObjectURL(url);
     },
     clearQueue() {
-      for (const item of this.batchQueue) {
+      // Revoke all preview URLs
+      this.batchQueue.forEach(item => {
         if (item.previewUrl) {
           URL.revokeObjectURL(item.previewUrl);
-          item.previewUrl = null;
         }
+      });
+      
+      // Disconnect and reconnect observer
+      if (this.observer) {
+        this.observer.disconnect();
       }
+      
       this.batchQueue = [];
+      this.visibleItems.clear();
       this.cleanup();
+      
+      // Reinitialize observer
+      this.initializeIntersectionObserver();
     },
     resetState() {
       // If in compare view, do not reset state
@@ -2011,6 +2161,38 @@ export default {
         };
         this.$on('compare-exit', check);
       });
+    },
+    initializeIntersectionObserver() {
+      this.observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            const index = entry.target.dataset.index;
+            if (entry.isIntersecting) {
+              this.visibleItems.add(index);
+              this.loadItemPreview(index);
+            } else {
+              this.visibleItems.delete(index);
+            }
+          });
+        },
+        {
+          root: null,
+          rootMargin: '50px',
+          threshold: 0.1
+        }
+      );
+    },
+    async loadItemPreview(index) {
+      const item = this.batchQueue[index];
+      if (!item || item.previewUrl || item.status === 'error') return;
+
+      try {
+        const previewUrl = await this.createPreview(item.file);
+        item.previewUrl = previewUrl;
+      } catch (error) {
+        console.error('Error creating preview:', error);
+        item.error = 'Failed to create preview';
+      }
     },
   },
 };
@@ -2727,7 +2909,7 @@ html, body, #app {
     width: 95vw;
     min-width: 0;
     max-width: 98vw;
-    left: 2.5vw;
+    left: 50%;
     padding: 10px;
   }
   .goback, .github {
@@ -2833,4 +3015,30 @@ html, body, #app {
 .upload-button:hover {
  ;
 }
+
+.preview-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
 </style>
