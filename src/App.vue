@@ -389,40 +389,35 @@
                class="batch-item"
                :class="item.status">
             <div class="image-container">
-              <img :src="item.preview" class="preview-image" />
+              <img :src="item.previewUrl" class="preview-image" />
               <div class="image-dark-overlay"></div>
               <div class="status-overlay">
                 <div class="status-content">
                   <div v-if="item.status === 'processing'" class="progress-container">
-                    <div class="progress-ring">
-                      <svg viewBox="0 0 50 50">
-                        <circle 
-                          cx="25" 
-                          cy="25" 
-                          r="20" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          stroke-width="5"
-                          :stroke-dasharray="circumference"
-                          :stroke-dashoffset="circumference - (circumference * (item.progress || 0) / 100)"
-                        />
-                      </svg>
-                    </div>
                     <span class="progress-text">{{ Math.round(item.progress || 0) }}%</span>
                   </div>
                   <span class="status-text">{{ item.status }}</span>
                   <span v-if="item.error" class="error-message">{{ item.error }}</span>
-                  <button 
-                    v-if="item.status === 'done'" 
-                    @click="downloadSingle(item)"
-                    class="action-button small download-overlay-btn"
-                  >
-                    <svg viewBox="0 0 24 24" width="16" height="16">
-                      <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-                    </svg>
-                    Download
-                  </button>
-                  <button v-if="item.status === 'done'" @click="compareBatchItem(item)" class="action-button small compare-btn">Compare</button>
+                  <div v-if="item.status === 'done'" class="status-actions">
+                    <button 
+                      @click="downloadSingle(item)"
+                      class="action-button small download-overlay-btn"
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16">
+                        <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                      </svg>
+                      Download
+                    </button>
+                    <button 
+                      @click="compareBatchItem(item)" 
+                      class="action-button small compare-btn"
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16">
+                        <path fill="currentColor" d="M10 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h5v2h2V1h-2v2zm0 15H5l5-6v6zm9-15h-5v2h5v13l-5-6v9h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
+                      </svg>
+                      Compare
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -549,6 +544,8 @@ export default {
       isProcessingBatch: false,
       circumference: 2 * Math.PI * 20, // For r=20 in the progress ring
       compareItem: null,
+      compareOriginalImg: null,
+      compareUpscaledImg: null,
     };
   },
   watch: {
@@ -586,6 +583,18 @@ export default {
         }
         this.factor = 4;
       } else {
+      }
+    },
+    compareItem(newVal, oldVal) {
+      if (!newVal) {
+        if (this.compareOriginalImg && this.compareOriginalImg.src) {
+          URL.revokeObjectURL(this.compareOriginalImg.src);
+        }
+        if (this.compareUpscaledImg && this.compareUpscaledImg.src) {
+          URL.revokeObjectURL(this.compareUpscaledImg.src);
+        }
+        this.compareOriginalImg = null;
+        this.compareUpscaledImg = null;
       }
     },
   },
@@ -695,8 +704,11 @@ export default {
               throw new Error('Invalid image dimensions');
             }
 
-            this.imgLoaded = true;
-            this.drawLine = true;
+            // Only update UI state if not in compare mode
+            if (!this.compareItem) {
+              this.imgLoaded = true;
+              this.drawLine = true;
+            }
 
             let wasmModule = await Module();
             this.wasmModule = wasmModule;
@@ -706,7 +718,7 @@ export default {
             imgCanvas.width = this.img.width;
             imgCanvas.height = this.img.height;
             
-            const imgCtx = imgCanvas.getContext("2d");
+            const imgCtx = imgCanvas.getContext("2d", { willReadFrequently: true });
             if (!imgCtx) {
               throw new Error('Failed to get canvas context');
             }
@@ -751,30 +763,37 @@ export default {
             wasmModule._free(sourcePtr);
             wasmModule._free(targetPtr);
 
-            const canvas = this.$refs.canvas;
-            const containerWidth = canvas.width;
-            const containerHeight = canvas.height;
+            // Only update canvas if not in compare mode
+            if (!this.compareItem) {
+              const canvas = this.$refs.canvas;
+              const containerWidth = canvas.width;
+              const containerHeight = canvas.height;
 
-            const scaleX = (0.8 * containerWidth) / this.img.width;
-            const scaleY = (0.8 * containerHeight) / this.img.height;
-            this.imgScale = Math.min(scaleX, scaleY, 4);
-            this.imgInitScale = this.imgScale;
+              const scaleX = (0.8 * containerWidth) / this.img.width;
+              const scaleY = (0.8 * containerHeight) / this.img.height;
+              this.imgScale = Math.min(scaleX, scaleY, 4);
+              this.imgInitScale = this.imgScale;
 
-            this.imgX = (containerWidth - this.img.width * this.imgScale) / 2;
-            this.imgY = (containerHeight - this.img.height * this.imgScale) * 0.4;
+              this.imgX = (containerWidth - this.img.width * this.imgScale) / 2;
+              this.imgY = (containerHeight - this.img.height * this.imgScale) * 0.4;
 
-            this.drawImage();
+              this.drawImage();
+            }
             resolve();
           } catch (error) {
             console.error('Error in loadImg:', error);
-            this.cleanup();
+            if (!this.compareItem) {
+              this.cleanup();
+            }
             reject(error);
           }
         };
 
         this.img.onerror = (error) => {
           console.error('Error loading image:', error);
-          this.cleanup();
+          if (!this.compareItem) {
+            this.cleanup();
+          }
           reject(new Error('Failed to load image'));
         };
       });
@@ -791,10 +810,8 @@ export default {
       const files = event.dataTransfer.files;
       if (files && files.length > 0) {
         const file = files[0];
-        this.imgName = file.name
-          .replace(".jpg", "")
-          .replace(".jpeg", "")
-          .replace(".png", "");
+        // Get filename without extension
+        this.imgName = file.name.replace(/\.[^/.]+$/, "");
         const reader = new FileReader();
         reader.onload = (e) => {
           this.loadImg(e.target.result);
@@ -808,10 +825,8 @@ export default {
       input.accept = "image/*";
       input.onchange = (e) => {
         const file = e.target.files[0];
-        this.imgName = file.name
-          .replace(".jpg", "")
-          .replace(".jpeg", "")
-          .replace(".png", "");
+        // Get filename without extension
+        this.imgName = file.name.replace(/\.[^/.]+$/, "");
         const reader = new FileReader();
         reader.onload = (e) => {
           this.loadImg(e.target.result);
@@ -826,9 +841,40 @@ export default {
     },
     drawImage_() {
       const canvas = this.$refs.canvas;
-      const ctx = canvas.getContext("2d");
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // Use local images for compare view
+      if (this.compareItem && this.compareOriginalImg && this.compareUpscaledImg) {
+        ctx.drawImage(
+          this.compareOriginalImg,
+          this.imgX,
+          this.imgY,
+          this.compareOriginalImg.width * this.imgScale,
+          this.compareOriginalImg.height * this.imgScale
+        );
+        if (this.compareUpscaledImg.src) {
+          ctx.drawImage(
+            this.compareUpscaledImg,
+            ((this.compareUpscaledImg.width / this.compareOriginalImg.width) *
+              (this.linePosition - this.imgX)) /
+              this.imgScale,
+            0,
+            this.compareUpscaledImg.width -
+              ((this.compareUpscaledImg.width / this.compareOriginalImg.width) *
+                (this.linePosition - this.imgX)) /
+                this.imgScale,
+            this.compareUpscaledImg.height,
+            this.linePosition,
+            this.imgY,
+            this.imgX + this.compareOriginalImg.width * this.imgScale - this.linePosition,
+            this.compareOriginalImg.height * this.imgScale
+          );
+        }
+        return;
+      }
+
+      // Default: use global images
       ctx.drawImage(
         this.img,
         this.imgX,
@@ -1187,8 +1233,11 @@ export default {
     saveImage() {
       const a = document.createElement("a");
       a.href = this.processedImg.src;
-      if (this.hasAlpha) a.download = this.imgName + ".png";
-      else a.download = this.imgName + ".jpg";
+      // Get the original filename without extension
+      const originalName = this.imgName;
+      // Add _upscaled suffix and appropriate extension
+      const extension = this.hasAlpha ? '.png' : '.jpg';
+      a.download = `${originalName}_upscaled${extension}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1267,10 +1316,11 @@ export default {
     },
     async addToBatchQueue(files) {
       const newItems = await Promise.all(files.map(async file => {
-        const preview = await this.createPreview(file);
+        const previewUrl = await this.createPreview(file);
         return {
           file,
-          preview,
+          preview: previewUrl, // for backward compatibility
+          previewUrl,          // for revocation and display
           status: 'pending',
           result: null,
           error: null,
@@ -1283,14 +1333,51 @@ export default {
       if (this.isProcessingBatch) return;
       this.isProcessingBatch = true;
       
+      // Store initial canvas state if in compare mode
+      let initialCanvasState = null;
+      let initialCompareState = null;
+      
+      // Check if we're in compare mode before starting batch processing
+      if (this.compareItem) {
+        const canvas = this.$refs.canvas;
+        const ctx = canvas.getContext('2d');
+        initialCanvasState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Store all compare-related state
+        initialCompareState = {
+          compareItem: this.compareItem,
+          compareOriginalImg: this.compareOriginalImg,
+          compareUpscaledImg: this.compareUpscaledImg,
+          imgX: this.imgX,
+          imgY: this.imgY,
+          imgScale: this.imgScale,
+          imgInitScale: this.imgInitScale,
+          linePosition: this.linePosition,
+          imgLoaded: this.imgLoaded,
+          isDone: this.isDone,
+          dragging: this.dragging,
+          touching: this.touching,
+          drawLine: this.drawLine,
+          draggingLine: this.draggingLine,
+          touchStartImgX: this.touchStartImgX,
+          touchStartImgY: this.touchStartImgY,
+          touchStartX: this.touchStartX,
+          touchStartY: this.touchStartY,
+          touchStartDistance: this.touchStartDistance,
+          imgScaleStart: this.imgScaleStart
+        };
+      }
+      
       try {
         for (const item of this.batchQueue) {
           if (item.status === 'pending') {
             try {
               item.status = 'processing';
               
-              // Reset state for new image
-              this.resetState();
+              // Only reset state if we're not in compare mode
+              if (!this.compareItem) {
+                this.resetState();
+              }
               
               // Load image
               const imgUrl = URL.createObjectURL(item.file);
@@ -1390,7 +1477,68 @@ export default {
                         item.result = blob;
                         item.status = 'done';
                         this.info = "Done! Time used: " + (Date.now() - start) / 1000 + "s";
-                        resolve();
+                        
+                        // Create thumbnail of the upscaled result
+                        const upscaledImg = new Image();
+                        upscaledImg.onload = () => {
+                          // Create a canvas for the thumbnail
+                          const thumbnailCanvas = document.createElement('canvas');
+                          const thumbnailCtx = thumbnailCanvas.getContext('2d');
+                          
+                          // Set thumbnail size (128x128)
+                          const maxSize = 128;
+                          let width = upscaledImg.width;
+                          let height = upscaledImg.height;
+                          
+                          // Calculate dimensions while maintaining aspect ratio
+                          if (width > height) {
+                            if (width > maxSize) {
+                              height = Math.round((height * maxSize) / width);
+                              width = maxSize;
+                            }
+                          } else {
+                            if (height > maxSize) {
+                              width = Math.round((width * maxSize) / height);
+                              height = maxSize;
+                            }
+                          }
+                          
+                          // Set canvas size and draw the thumbnail
+                          thumbnailCanvas.width = width;
+                          thumbnailCanvas.height = height;
+                          thumbnailCtx.drawImage(upscaledImg, 0, 0, width, height);
+                          
+                          // Convert to blob and create URL
+                          thumbnailCanvas.toBlob(thumbnailBlob => {
+                            if (item.previewUrl) {
+                              URL.revokeObjectURL(item.previewUrl);
+                            }
+                            item.previewUrl = URL.createObjectURL(thumbnailBlob);
+                            
+                            // Only restore compare state if we were actually in compare mode
+                            // AND if we're still in the same compare mode
+                            if (initialCompareState && this.compareItem === initialCompareState.compareItem) {
+                              // Restore all states from initial state
+                              Object.assign(this, initialCompareState);
+                              
+                              // Restore initial canvas state
+                              if (initialCanvasState) {
+                                const canvas = this.$refs.canvas;
+                                const ctx = canvas.getContext('2d');
+                                ctx.putImageData(initialCanvasState, 0, 0);
+                              }
+                              
+                              // Update drag line position
+                              if (this.$refs.dragLine) {
+                                this.$refs.dragLine.style.left = this.linePosition / this.dpr + "px";
+                              }
+                            }
+                            
+                            resolve();
+                          }, 'image/jpeg', 0.8);
+                        };
+                        
+                        upscaledImg.src = URL.createObjectURL(blob);
                       },
                       type,
                       quality
@@ -1423,12 +1571,13 @@ export default {
               });
 
             } catch (error) {
-              console.error('Error processing image:', error);
               item.status = 'error';
               item.error = error.message;
             } finally {
-              // Cleanup after each image
-              this.cleanup();
+              // Only cleanup if we're not in compare mode
+              if (!this.compareItem) {
+                this.cleanup();
+              }
             }
           }
         }
@@ -1471,44 +1620,39 @@ export default {
       URL.revokeObjectURL(url);
     },
     clearQueue() {
+      for (const item of this.batchQueue) {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+          item.previewUrl = null;
+        }
+      }
       this.batchQueue = [];
       this.cleanup();
     },
-    cleanup() {
-      // Clear canvas
-      const canvas = this.$refs.canvas;
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Clear image canvas
-      const imgCanvas = this.$refs.imgCanvas;
-      const imgCtx = imgCanvas.getContext('2d');
-      imgCtx.clearRect(0, 0, imgCanvas.width, imgCanvas.height);
-      
-      // Reset state
-      this.imgLoaded = false;
-      this.input = null;
-      this.inputAlpha = null;
-      this.output = null;
-      this.isProcessing = false;
-      this.isDone = false;
-      this.progress = 0;
-      
-      // Clear image objects
-      this.img = new Image();
-      this.processedImg = new Image();
-      
-      // Clear URLs
-      if (this.processedImg.src) {
-        URL.revokeObjectURL(this.processedImg.src);
-      }
-      
-      // Force garbage collection if possible
-      if (window.gc) {
-        window.gc();
-      }
-    },
     resetState() {
+      // If in compare view, do not reset state
+      if (this.compareItem) return;
+      
+      // Store current states
+      const currentImgX = this.imgX;
+      const currentImgY = this.imgY;
+      const currentImgScale = this.imgScale;
+      const currentImgInitScale = this.imgInitScale;
+      const currentLinePosition = this.linePosition;
+      const currentImgLoaded = this.imgLoaded;
+      const currentIsDone = this.isDone;
+      const currentDragging = this.dragging;
+      const currentTouching = this.touching;
+      const currentDrawLine = this.drawLine;
+      const currentDraggingLine = this.draggingLine;
+      const currentTouchStartImgX = this.touchStartImgX;
+      const currentTouchStartImgY = this.touchStartImgY;
+      const currentTouchStartX = this.touchStartX;
+      const currentTouchStartY = this.touchStartY;
+      const currentTouchStartDistance = this.touchStartDistance;
+      const currentImgScaleStart = this.imgScaleStart;
+
+      // Reset all states
       this.dragging = false;
       this.touching = false;
       this.imgX = 0;
@@ -1536,6 +1680,99 @@ export default {
       this.isProcessing = false;
       this.isDone = false;
       this.progress = 0;
+
+      // If we were in compare mode, restore those states
+      if (this.compareItem) {
+        this.imgX = currentImgX;
+        this.imgY = currentImgY;
+        this.imgScale = currentImgScale;
+        this.imgInitScale = currentImgInitScale;
+        this.linePosition = currentLinePosition;
+        this.imgLoaded = currentImgLoaded;
+        this.isDone = currentIsDone;
+        this.dragging = currentDragging;
+        this.touching = currentTouching;
+        this.drawLine = currentDrawLine;
+        this.draggingLine = currentDraggingLine;
+        this.touchStartImgX = currentTouchStartImgX;
+        this.touchStartImgY = currentTouchStartImgY;
+        this.touchStartX = currentTouchStartX;
+        this.touchStartY = currentTouchStartY;
+        this.touchStartDistance = currentTouchStartDistance;
+        this.imgScaleStart = currentImgScaleStart;
+      }
+    },
+    cleanup() {
+      // If in compare view, do not cleanup
+      if (this.compareItem) return;
+
+      // Store current states
+      const currentImgX = this.imgX;
+      const currentImgY = this.imgY;
+      const currentImgScale = this.imgScale;
+      const currentImgInitScale = this.imgInitScale;
+      const currentLinePosition = this.linePosition;
+      const currentImgLoaded = this.imgLoaded;
+      const currentIsDone = this.isDone;
+      const currentDragging = this.dragging;
+      const currentTouching = this.touching;
+      const currentDrawLine = this.drawLine;
+      const currentDraggingLine = this.draggingLine;
+      const currentTouchStartImgX = this.touchStartImgX;
+      const currentTouchStartImgY = this.touchStartImgY;
+      const currentTouchStartX = this.touchStartX;
+      const currentTouchStartY = this.touchStartY;
+      const currentTouchStartDistance = this.touchStartDistance;
+      const currentImgScaleStart = this.imgScaleStart;
+
+      // Clear canvas
+      const canvas = this.$refs.canvas;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Clear image canvas
+      const imgCanvas = this.$refs.imgCanvas;
+      const imgCtx = imgCanvas.getContext('2d', { willReadFrequently: true });
+      imgCtx.clearRect(0, 0, imgCanvas.width, imgCanvas.height);
+      
+      // Reset state
+      this.imgLoaded = false;
+      this.input = null;
+      this.inputAlpha = null;
+      this.output = null;
+      this.isProcessing = false;
+      this.isDone = false;
+      this.progress = 0;
+      
+      // Clear image objects
+      this.img = new Image();
+      this.processedImg = new Image();
+      
+      // Clear URLs
+      if (this.processedImg.src) {
+        URL.revokeObjectURL(this.processedImg.src);
+      }
+      
+      // If we were in compare mode, restore those states
+      if (this.compareItem) {
+        this.imgX = currentImgX;
+        this.imgY = currentImgY;
+        this.imgScale = currentImgScale;
+        this.imgInitScale = currentImgInitScale;
+        this.linePosition = currentLinePosition;
+        this.imgLoaded = currentImgLoaded;
+        this.isDone = currentIsDone;
+        this.dragging = currentDragging;
+        this.touching = currentTouching;
+        this.drawLine = currentDrawLine;
+        this.draggingLine = currentDraggingLine;
+        this.touchStartImgX = currentTouchStartImgX;
+        this.touchStartImgY = currentTouchStartImgY;
+        this.touchStartX = currentTouchStartX;
+        this.touchStartY = currentTouchStartY;
+        this.touchStartDistance = currentTouchStartDistance;
+        this.imgScaleStart = currentImgScaleStart;
+      }
     },
     retryItem(item) {
       item.status = 'pending';
@@ -1543,28 +1780,114 @@ export default {
       this.startBatchProcessing();
     },
     async createPreview(file) {
-      // Implement the logic to create a preview image from the file
-      // This is a placeholder and should be replaced with the actual implementation
-      return URL.createObjectURL(file);
+      return new Promise((resolve, reject) => {
+        // Validate file size (e.g., max 50MB)
+        const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+        if (file.size > MAX_FILE_SIZE) {
+          reject(new Error('File too large. Maximum size is 50MB.'));
+          return;
+        }
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          reject(new Error('Invalid file type. Please upload an image.'));
+          return;
+        }
+
+        const img = new Image();
+        img.onload = () => {
+          try {
+            // Create a canvas for the thumbnail
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set thumbnail size (128x128)
+            const maxSize = 128;
+            let width = img.width;
+            let height = img.height;
+            
+            // Calculate dimensions while maintaining aspect ratio
+            if (width > height) {
+              if (width > maxSize) {
+                height = Math.round((height * maxSize) / width);
+                width = maxSize;
+              }
+            } else {
+              if (height > maxSize) {
+                width = Math.round((width * maxSize) / height);
+                height = maxSize;
+              }
+            }
+            
+            // Set canvas size and draw the thumbnail
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Convert to blob and create URL
+            canvas.toBlob(blob => {
+              if (!blob) {
+                reject(new Error('Failed to create thumbnail blob'));
+                return;
+              }
+              try {
+                const url = URL.createObjectURL(blob);
+                resolve(url);
+              } catch (error) {
+                reject(new Error('Failed to create object URL: ' + error.message));
+              }
+            }, 'image/jpeg', 0.8); // Use JPEG for better compression
+          } catch (error) {
+            reject(new Error('Failed to create thumbnail: ' + error.message));
+          } finally {
+            // Clean up the image URL
+            if (img.src.startsWith('blob:')) {
+              URL.revokeObjectURL(img.src);
+            }
+          }
+        };
+        
+        img.onerror = () => {
+          reject(new Error('Failed to load image for preview'));
+        };
+        
+        try {
+          const fileUrl = URL.createObjectURL(file);
+          img.src = fileUrl;
+        } catch (error) {
+          reject(new Error('Failed to create file URL: ' + error.message));
+        }
+      });
     },
     async compareBatchItem(item) {
+      // Clean up previous URLs if any
+      if (this.compareOriginalImg && this.compareOriginalImg.src) {
+        URL.revokeObjectURL(this.compareOriginalImg.src);
+      }
+      if (this.compareUpscaledImg && this.compareUpscaledImg.src) {
+        URL.revokeObjectURL(this.compareUpscaledImg.src);
+      }
       // Load original image
       const fileUrl = URL.createObjectURL(item.file);
-      this.img = new Image();
+      const originalImg = new Image();
       await new Promise((resolve) => {
-        this.img.onload = resolve;
-        this.img.src = fileUrl;
+        originalImg.onload = resolve;
+        originalImg.src = fileUrl;
       });
-      // Load upscaled image
-      this.processedImg = new Image();
+      // Clone the upscaled Blob and create a new URL
+      const upscaledBlob = item.result.slice(0, item.result.size, item.result.type);
+      const upscaledUrl = URL.createObjectURL(upscaledBlob);
+      const upscaledImg = new Image();
       await new Promise((resolve) => {
-        this.processedImg.onload = resolve;
-        this.processedImg.src = URL.createObjectURL(item.result);
+        upscaledImg.onload = resolve;
+        upscaledImg.src = upscaledUrl;
       });
-      // Set up state as in single upload mode
+      // Set up state for compare view
+      this.compareItem = item;
+      this.compareOriginalImg = originalImg;
+      this.compareUpscaledImg = upscaledImg;
       this.imgLoaded = true;
       this.isDone = true;
-      this.compareItem = item;
       // Center and fit image, enable zoom/pan
       this.$nextTick(() => {
         // Canvas and container
@@ -1576,19 +1899,68 @@ export default {
         canvas.style.width = `${container.offsetWidth}px`;
         canvas.style.height = `${container.offsetHeight}px`;
         // Calculate scale to fit
-        const scaleX = (0.8 * canvas.width) / this.img.width;
-        const scaleY = (0.8 * canvas.height) / this.img.height;
+        const scaleX = (0.8 * canvas.width) / originalImg.width;
+        const scaleY = (0.8 * canvas.height) / originalImg.height;
         this.imgScale = Math.min(scaleX, scaleY, 4);
         this.imgInitScale = this.imgScale;
         // Center image
-        this.imgX = (canvas.width - this.img.width * this.imgScale) / 2;
-        this.imgY = (canvas.height - this.img.height * this.imgScale) * 0.4;
+        this.imgX = (canvas.width - originalImg.width * this.imgScale) / 2;
+        this.imgY = (canvas.height - originalImg.height * this.imgScale) * 0.4;
         // Set slider position
         this.linePosition = canvas.width * 0.5;
         if (this.$refs.dragLine) {
           this.$refs.dragLine.style.left = this.linePosition / this.dpr + "px";
         }
         this.drawImage();
+
+        // Capture the initial state for batch processing
+        console.log('[Compare] Capturing initial state for:', item.file.name);
+        const ctx = canvas.getContext('2d');
+        this.batchCompareState = {
+          canvasState: ctx.getImageData(0, 0, canvas.width, canvas.height),
+          compareState: {
+            compareItem: this.compareItem,
+            compareOriginalImg: this.compareOriginalImg,
+            compareUpscaledImg: this.compareUpscaledImg,
+            imgX: this.imgX,
+            imgY: this.imgY,
+            imgScale: this.imgScale,
+            imgInitScale: this.imgInitScale,
+            linePosition: this.linePosition,
+            imgLoaded: this.imgLoaded,
+            isDone: this.isDone,
+            dragging: this.dragging,
+            touching: this.touching,
+            drawLine: this.drawLine,
+            draggingLine: this.draggingLine,
+            touchStartImgX: this.touchStartImgX,
+            touchStartImgY: this.touchStartImgY,
+            touchStartX: this.touchStartX,
+            touchStartY: this.touchStartY,
+            touchStartDistance: this.touchStartDistance,
+            imgScaleStart: this.imgScaleStart
+          }
+        };
+        console.log('[Compare] Initial state captured:', {
+          canvasWidth: canvas.width,
+          canvasHeight: canvas.height,
+          imgX: this.batchCompareState.compareState.imgX,
+          imgY: this.batchCompareState.compareState.imgY,
+          imgScale: this.batchCompareState.compareState.imgScale,
+          linePosition: this.batchCompareState.compareState.linePosition
+        });
+      });
+    },
+    async waitForCompareExit() {
+      if (!this.compareItem) return;
+      await new Promise(resolve => {
+        const check = () => {
+          if (!this.compareItem) {
+            this.$off('compare-exit', check);
+            resolve();
+          }
+        };
+        this.$on('compare-exit', check);
       });
     },
   },
@@ -1744,19 +2116,17 @@ html, body, #app {
 }
 
 .image-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
 }
 
 .preview-image {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  display: block;
+  object-fit: cover;
+  filter: blur(3px);
+  transform: scale(1.1); /* Prevent blur edges from showing */
 }
 
 .status-overlay {
@@ -1768,70 +2138,105 @@ html, body, #app {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2;
-}
-
-.item-info {
-  position: relative;
+  transition: background-color 0.3s ease;
   z-index: 3;
-  background: none;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  justify-content: flex-end;
 }
 
 .status-overlay.processing {
-  background: rgba(33, 150, 243, 0.8);
+  background: rgba(33, 150, 243, 0.7);
 }
 
 .status-overlay.done {
-  background: rgba(76, 175, 80, 0.8);
+  background: rgba(76, 175, 80, 0.7);
 }
 
 .status-overlay.error {
-  background: rgba(244, 67, 54, 0.8);
+  background: rgba(244, 67, 54, 0.7);
 }
 
 .status-overlay.pending {
-  background: rgba(158, 158, 158, 0.8);
+  background: rgba(158, 158, 158, 0.7);
 }
 
 .status-content {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.status-text {
+  text-transform: capitalize;
+  margin-top: 5px;
+  color: white;
+  font-size: 1.2em;
+  font-weight: 500;
+}
+
+.status-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.action-button.small {
+  padding: 8px 16px;
+  font-size: 0.9em;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.action-button.small.download-overlay-btn {
+  background: #fff;
+  color: #222;
+  font-weight: 500;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: all 0.2s ease;
+}
+
+.action-button.small.download-overlay-btn:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+}
+
+.action-button.small.compare-btn {
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: all 0.2s ease;
+}
+
+.action-button.small.compare-btn:hover {
+  background: #1976D2;
+  transform: translateY(-1px);
+}
+
+.action-button.small.compare-btn:disabled {
+  background: #666;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .progress-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-}
-
-.progress-ring {
-  width: 40px;
-  height: 40px;
-  position: relative;
-}
-
-.progress-ring svg {
-  transform: rotate(-90deg);
-}
-
-.progress-ring circle {
-  transition: stroke-dashoffset 0.3s ease;
+  gap: 8px;
 }
 
 .progress-text {
-  font-size: 0.9em;
+  font-size: 2.5em;
   font-weight: bold;
-}
-
-.status-text {
-  text-transform: capitalize;
-  margin-top: 5px;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .error-message {
@@ -2061,85 +2466,6 @@ html, body, #app {
   transform: translateY(-2px);
 }
 
-.image-container {
-  position: relative;
-  aspect-ratio: 1;
-  overflow: hidden;
-}
-
-.preview-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.status-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.3s ease;
-}
-
-.status-overlay.processing {
-  background: rgba(33, 150, 243, 0.9);
-}
-
-.status-overlay.done {
-  background: rgba(76, 175, 80, 0.9);
-}
-
-.status-overlay.error {
-  background: rgba(244, 67, 54, 0.9);
-}
-
-.status-overlay.pending {
-  background: rgba(158, 158, 158, 0.9);
-}
-
-.progress-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.progress-ring {
-  width: 48px;
-  height: 48px;
-}
-
-.progress-ring svg {
-  transform: rotate(-90deg);
-}
-
-.progress-ring circle {
-  transition: stroke-dashoffset 0.3s ease;
-}
-
-.progress-text {
-  font-size: 1em;
-  font-weight: bold;
-  color: white;
-}
-
-.status-text {
-  text-transform: capitalize;
-  color: white;
-  font-size: 0.9em;
-  margin-top: 4px;
-}
-
-.error-message {
-  color: #ffebee;
-  font-size: 0.8em;
-  margin-top: 4px;
-}
-
 .item-info {
   padding: 0px;
   display: flex;
@@ -2158,11 +2484,6 @@ html, body, #app {
 .item-actions {
   display: flex;
   gap: 8px;
-}
-
-.action-button.small {
-  padding: 6px 12px;
-  font-size: 0.8em;
 }
 
 .hero {
