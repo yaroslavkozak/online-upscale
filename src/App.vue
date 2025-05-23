@@ -1,4 +1,3 @@
-
 <!--
   Developed by Yaroslav Kozak
   https://github.com/yaroslavkozak
@@ -470,121 +469,6 @@
         </div>
       </div>
     </template>
-
-    <!-- BATCH MODE DESKTOP -->
-
-    <!-- BATCH MODE MOBILE -->
-    <div v-if="batchQueue.length > 0 && !compareItem && isMobile" class="batch-container-mobile" style="overflow-y:auto; max-height:100vh;">
-      <div class="batch-header-mobile">
-        <h2>Batch Processing</h2>
-        <div class="batch-stats-mobile">
-          <div class="stat-item-mobile">
-            <span class="stat-value">{{ batchQueue.length }}</span>
-            <span class="stat-label">Total</span>
-          </div>
-          <div class="stat-item-mobile">
-            <span class="stat-value">{{ completedCount }}</span>
-            <span class="stat-label">Done</span>
-          </div>
-          <div class="stat-item-mobile">
-            <span class="stat-value">{{ processingCount }}</span>
-            <span class="stat-label">Processing</span>
-          </div>
-          <div class="stat-item-mobile">
-            <span class="stat-value">{{ failedCount }}</span>
-            <span class="stat-label">Failed</span>
-          </div>
-        </div>
-        <div class="header-actions-mobile">
-          <button @click="downloadAll" :disabled="!hasCompletedItems" class="action-button-mobile primary">
-            Download All
-          </button>
-          <button @click="clearQueue" class="action-button-mobile secondary">
-            Clear Queue
-          </button>
-        </div>
-      </div>
-      <div class="batch-options-mobile">
-        <div class="options-header-mobile">
-          <h3>Upscaling Settings</h3>
-          <button 
-            @click="startBatchProcessing" 
-            class="start-button-mobile"
-            :disabled="isProcessingBatch || !batchQueue.length"
-          >
-            {{ isProcessingBatch ? 'Processing...' : 'Start Processing' }}
-          </button>
-        </div>
-        <div class="options-grid-mobile">
-          <div class="option-group-mobile">
-            <label>Type</label>
-            <select v-model="model_type" class="styled-select-mobile">
-              <option value="realesrgan">Real-ESRGAN</option>
-              <option value="realcugan">Real-CUGAN</option>
-            </select>
-          </div>
-          <div v-if="model_type === 'realesrgan'" class="option-group-mobile">
-            <label>Model</label>
-            <select v-model="model" class="styled-select-mobile">
-              <option v-for="modelOption in model_config.realesrgan.model" :key="modelOption" :value="modelOption">
-                {{ modelOption }}
-              </option>
-            </select>
-          </div>
-          <div v-else-if="model_type === 'realcugan'" class="option-group-mobile">
-            <label>Denoise</label>
-            <select v-model="denoise" class="styled-select-mobile">
-              <option v-for="denoiseOption in model_config.realcugan.denoise[factor]" :key="denoiseOption" :value="denoiseOption">
-                {{ denoiseOption }}
-              </option>
-            </select>
-          </div>
-          <div class="option-group-mobile">
-            <label>Scale</label>
-            <select v-model="factor" class="styled-select-mobile">
-              <option v-for="factorOption in model_config[model_type].factor" :key="factorOption" :value="factorOption">
-                {{ factorOption }}x
-              </option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="batch-grid-mobile">
-        <div
-          v-for="(item, index) in batchQueue"
-          :key="index"
-          class="batch-item-mobile"
-          :class="item.status"
-          :data-index="item.index"
-        >
-          <div class="image-container-mobile">
-            <img v-if="item.previewUrl" :src="item.previewUrl" class="preview-image-mobile" />
-            <div v-else class="preview-placeholder-mobile">
-              <div class="loading-spinner-mobile"></div>
-            </div>
-            <div class="image-dark-overlay-mobile"></div>
-            <div class="status-overlay-mobile">
-              <div class="status-content-mobile">
-                <div v-if="item.status === 'processing'" class="progress-container-mobile">
-                  <span class="progress-text-mobile">{{ Math.round(item.progress || 0) }}%</span>
-                </div>
-                <span class="status-text-mobile">{{ item.status }}</span>
-                <span v-if="item.error" class="error-message-mobile">{{ item.error }}</span>
-                <div v-if="item.status === 'done'" class="status-actions-mobile">
-                  <button @click="downloadSingle(item)" class="action-button-mobile small download-overlay-btn-mobile">Download</button>
-                  <button @click="compareBatchItem(item)" class="action-button-mobile small compare-btn-mobile">Compare</button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="item-info-mobile">
-            <div class="item-actions-mobile">
-              <button v-if="item.status === 'error'" @click="retryItem(item)" class="action-button-mobile small">Retry</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -1493,6 +1377,16 @@ export default {
       });
     },
     async startBatchProcessing() {
+      // Force fast model for mobile batch
+      if (this.isMobile) {
+        this.model_type = 'realesrgan';
+        this.model = 'anime_fast';
+        this.factor = 4;
+        this.tile_size = 64;
+        this.backend = 'webgl';
+        this.denoise = '';
+        this.min_lap = 12;
+      }
       if (this.isProcessingBatch) return;
       this.isProcessingBatch = true;
       

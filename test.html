@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Batch Mobile UI Test</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    .batch-container-mobile {
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      background: #181818;
+      display: flex;
+      flex-direction: column;
+    }
+    .batch-header-mobile {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #222;
+      color: #fff;
+      padding: 16px;
+      text-align: center;
+      border-bottom: 2px solid #444;
+    }
+    .batch-stats-mobile {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 10px;
+      gap: 4px;
+    }
+    .stat-item-mobile {
+      background: #232323;
+      border-radius: 8px;
+      padding: 8px 0;
+      flex: 1 1 0;
+      margin: 0 2px;
+    }
+    .stat-value {
+      font-size: 1.1em;
+      color: #fff;
+      font-weight: 600;
+      display: block;
+    }
+    .stat-label {
+      font-size: 0.8em;
+      color: #aaa;
+      display: block;
+    }
+    .header-actions-mobile {
+      display: flex;
+      gap: 8px;
+      margin: 8px 0 0 0;
+      justify-content: center;
+    }
+    .action-button-mobile {
+      flex: 1 1 0;
+      padding: 10px 0;
+      border: none;
+      border-radius: 6px;
+      font-size: 1em;
+      font-weight: 600;
+      background: #232323;
+      color: #fff;
+      transition: background 0.2s;
+    }
+    .action-button-mobile.primary {
+      background: #4caf50;
+      color: #fff;
+    }
+    .action-button-mobile.secondary {
+      background: #232323;
+      color: #fff;
+    }
+    .action-button-mobile:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .batch-options-mobile {
+      background: #181818;
+      padding: 12px 0 8px 0;
+      border-bottom: 1px solid #222;
+    }
+    .options-header-mobile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .options-header-mobile h3 {
+      color: #fff;
+      font-size: 1em;
+      margin: 0;
+      font-weight: 700;
+    }
+    .start-button-mobile {
+      padding: 10px 0;
+      width: 100%;
+      border: none;
+      border-radius: 6px;
+      background: #2196f3;
+      color: #fff;
+      font-size: 1em;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .start-button-mobile:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .options-grid-mobile {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      margin-top: 8px;
+    }
+    .option-group-mobile {
+      background: #232323;
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    .option-group-mobile label {
+      color: #b0b0b0;
+      font-size: 0.95em;
+      margin-bottom: 2px;
+      display: block;
+    }
+    .styled-select-mobile, .option-group-mobile select {
+      width: 100%;
+      padding: 8px 6px;
+      font-size: 1em;
+      border-radius: 6px;
+      background: #181818;
+      color: #fff;
+      border: 1px solid #333;
+      margin-top: 2px;
+    }
+    .batch-grid-mobile {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 12px 4px 60px 4px;
+      background: #181818;
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 200vh;
+    }
+    .batch-item-mobile {
+      background: #232323;
+      border-radius: 10px;
+      min-height: 100px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <div class="batch-container-mobile">
+    <div class="batch-header-mobile">
+      <h2>Batch Processing</h2>
+      <div class="batch-stats-mobile">
+        <div class="stat-item-mobile">
+          <span class="stat-value">10</span>
+          <span class="stat-label">Total</span>
+        </div>
+        <div class="stat-item-mobile">
+          <span class="stat-value">5</span>
+          <span class="stat-label">Done</span>
+        </div>
+        <div class="stat-item-mobile">
+          <span class="stat-value">3</span>
+          <span class="stat-label">Processing</span>
+        </div>
+        <div class="stat-item-mobile">
+          <span class="stat-value">2</span>
+          <span class="stat-label">Failed</span>
+        </div>
+      </div>
+      <div class="header-actions-mobile">
+        <button class="action-button-mobile primary">Download All</button>
+        <button class="action-button-mobile secondary">Clear Queue</button>
+      </div>
+    </div>
+    <div class="batch-options-mobile">
+      <div class="options-header-mobile">
+        <h3>Upscaling Settings</h3>
+        <button class="start-button-mobile">Start Processing</button>
+      </div>
+      <div class="options-grid-mobile">
+        <div class="option-group-mobile">
+          <label>Type</label>
+          <select class="styled-select-mobile">
+            <option>Real-ESRGAN</option>
+            <option>Real-CUGAN</option>
+          </select>
+        </div>
+        <div class="option-group-mobile">
+          <label>Model</label>
+          <select class="styled-select-mobile">
+            <option>anime_plus</option>
+            <option>general_plus</option>
+          </select>
+        </div>
+        <div class="option-group-mobile">
+          <label>Scale</label>
+          <select class="styled-select-mobile">
+            <option>2x</option>
+            <option>4x</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="batch-grid-mobile">
+      <div class="batch-item-mobile">Item 1</div>
+      <div class="batch-item-mobile">Item 2</div>
+      <div class="batch-item-mobile">Item 3</div>
+      <div class="batch-item-mobile">Item 4</div>
+      <div class="batch-item-mobile">Item 5</div>
+      <div class="batch-item-mobile">Item 6</div>
+      <div class="batch-item-mobile">Item 7</div>
+      <div class="batch-item-mobile">Item 8</div>
+      <div class="batch-item-mobile">Item 9</div>
+      <div class="batch-item-mobile">Item 10</div>
+      <div class="batch-item-mobile">Item 11</div>
+      <div class="batch-item-mobile">Item 12</div>
+      <div class="batch-item-mobile">Item 13</div>
+      <div class="batch-item-mobile">Item 14</div>
+      <div class="batch-item-mobile">Item 15</div>
+      <div class="batch-item-mobile">Item 16</div>
+      <div class="batch-item-mobile">Item 17</div>
+      <div class="batch-item-mobile">Item 18</div>
+      <div class="batch-item-mobile">Item 19</div>
+      <div class="batch-item-mobile">Item 20</div>
+    </div>
+  </div>
+</body>
+</html>
