@@ -3,7 +3,6 @@
   https://github.com/yaroslavkozak
 -->
 <template>
-  <!-- <div v-if="isDragOver" class="drag-mask">Drop your image here</div> -->
   <div
     ref="canvasContainer"
     class="canvas-container"
@@ -16,6 +15,7 @@
     }"
     @drop.prevent="handleDrop"
     @dragover.prevent="isDragOver = true"
+    @dragenter.prevent
     @dragleave="
       (e) => {
         if (!e.currentTarget.contains(e.relatedTarget)) {
@@ -67,7 +67,7 @@
           </g>
         </svg>
       </button>
-      <a href="https://github.com/xororz/web-realesrgan" v-show="imgLoaded" target="_blank">
+      <a href="https://github.com/yaroslavkozak" v-show="imgLoaded" target="_blank">
         <img src="/gh.png" alt="github" class="github" />
       </a>
       <div class="floating-menu" :style="menu_style" @mousedown.stop>
@@ -496,6 +496,9 @@ export default {
       touchStartY: null,
       touchStartDistance: null,
       imgScaleStart: 1,
+      rafId: null,
+      lastFrameTime: 0,
+      minFrameTime: 1000 / 60, // 60fps
 
       imgLoaded: false,
       input: null,
@@ -657,6 +660,9 @@ export default {
   },
   beforeDestroy() {
     window.removeEventListener("resize", this.handleResize);
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+    }
   },
   methods: {
     initializeCanvas() {
@@ -922,9 +928,23 @@ export default {
     },
     dragImage(event) {
       if (this.dragging) {
-        this.imgX += event.movementX * this.dpr;
-        this.imgY += event.movementY * this.dpr;
-        this.drawImage();
+        if (!this.rafId) {
+          this.rafId = requestAnimationFrame(() => {
+            try {
+              const currentTime = performance.now();
+              if (currentTime - this.lastFrameTime >= this.minFrameTime) {
+                this.imgX += event.movementX * this.dpr;
+                this.imgY += event.movementY * this.dpr;
+                this.drawImage();
+                this.lastFrameTime = currentTime;
+              }
+            } catch (error) {
+              console.error('Error in drag animation:', error);
+            } finally {
+              this.rafId = null;
+            }
+          });
+        }
       }
       if (this.draggingLine) {
         this.updateLinePosition(event);
@@ -1000,34 +1020,39 @@ export default {
       }
       if (event.touches.length == 1) {
         const touch = event.touches[0];
-        const movementX =
-          touch.clientX * this.dpr -
-          this.touchStartX +
-          this.touchStartImgX -
-          this.imgX;
-        const movementY =
-          touch.clientY * this.dpr -
-          this.touchStartY +
-          this.touchStartImgY -
-          this.imgY;
         if (this.draggingLine) {
           this.updateLinePosition(event.touches[0]);
           this.drawImage();
           return;
         }
         if (this.touching) {
-          this.imgX += movementX;
-          this.imgY += movementY;
-          this.drawImage();
+          if (!this.rafId) {
+            this.rafId = requestAnimationFrame(() => {
+              try {
+                const currentTime = performance.now();
+                if (currentTime - this.lastFrameTime >= this.minFrameTime) {
+                  const movementX = touch.clientX * this.dpr - this.touchStartX + this.touchStartImgX - this.imgX;
+                  const movementY = touch.clientY * this.dpr - this.touchStartY + this.touchStartImgY - this.imgY;
+                  this.imgX += movementX;
+                  this.imgY += movementY;
+                  this.drawImage();
+                  this.lastFrameTime = currentTime;
+                }
+              } catch (error) {
+                console.error('Error in touch move animation:', error);
+              } finally {
+                this.rafId = null;
+              }
+            });
+          }
         }
       } else {
         const touch1 = event.touches[0];
         const touch2 = event.touches[1];
-        const distance =
-          Math.sqrt(
-            Math.pow(touch2.clientX - touch1.clientX, 2) +
-              Math.pow(touch2.clientY - touch1.clientY, 2)
-          ) * this.dpr;
+        const distance = Math.sqrt(
+          Math.pow(touch2.clientX - touch1.clientX, 2) +
+          Math.pow(touch2.clientY - touch1.clientY, 2)
+        ) * this.dpr;
         const canvas = this.$refs.canvas;
         const rect = canvas.getBoundingClientRect();
         const mouseX = this.touchStartX - rect.left;
@@ -1040,10 +1065,8 @@ export default {
         this.imgScale = Math.min(Math.max(minSize, newScale), maxSize);
 
         const scaleRatio = this.imgScale / prevScale;
-        const movementX =
-          ((touch1.clientX + touch2.clientX) / 2) * this.dpr - this.touchStartX;
-        const movementY =
-          ((touch1.clientY + touch2.clientY) / 2) * this.dpr - this.touchStartY;
+        const movementX = ((touch1.clientX + touch2.clientX) / 2) * this.dpr - this.touchStartX;
+        const movementY = ((touch1.clientY + touch2.clientY) / 2) * this.dpr - this.touchStartY;
         this.imgX = mouseX - (mouseX - this.imgX) * scaleRatio + movementX;
         this.imgY = mouseY - (mouseY - this.imgY) * scaleRatio + movementY;
         this.touchStartX = ((touch1.clientX + touch2.clientX) / 2) * this.dpr;
@@ -1333,6 +1356,10 @@ export default {
       if (this.isProcessingBatch) return;
       this.isProcessingBatch = true;
       
+      // Start timing the batch process
+      const batchStartTime = Date.now();
+      console.log(`[Batch] Starting batch processing at ${new Date().toLocaleTimeString()}`);
+      
       // Store initial canvas state if in compare mode
       let initialCanvasState = null;
       let initialCompareState = null;
@@ -1583,6 +1610,10 @@ export default {
         }
       } finally {
         this.isProcessingBatch = false;
+        const batchEndTime = Date.now();
+        const totalTime = (batchEndTime - batchStartTime) / 1000;
+        console.log(`[Batch] Batch processing completed at ${new Date().toLocaleTimeString()}`);
+        console.log(`[Batch] Total processing time: ${totalTime.toFixed(2)} seconds`);
       }
     },
     async downloadSingle(item) {
@@ -1633,6 +1664,15 @@ export default {
       // If in compare view, do not reset state
       if (this.compareItem) return;
       
+      // Cancel any pending animation frame
+      if (this.rafId) {
+        cancelAnimationFrame(this.rafId);
+        this.rafId = null;
+      }
+
+      // Reset animation timing
+      this.lastFrameTime = 0;
+
       // Store current states
       const currentImgX = this.imgX;
       const currentImgY = this.imgY;
@@ -1705,6 +1745,15 @@ export default {
     cleanup() {
       // If in compare view, do not cleanup
       if (this.compareItem) return;
+
+      // Cancel any pending animation frame
+      if (this.rafId) {
+        cancelAnimationFrame(this.rafId);
+        this.rafId = null;
+      }
+
+      // Reset animation timing
+      this.lastFrameTime = 0;
 
       // Store current states
       const currentImgX = this.imgX;
@@ -2737,5 +2786,51 @@ html, body, #app {
 .compare-btn:disabled {
   background: #666;
   cursor: not-allowed;
+}
+
+
+
+/* Enhance existing drag-over class */
+.canvas-container.drag-over {
+  border: 2px solid #4CAF50;
+  transition: all 0.2s ease;
+}
+
+.upload-button {
+  transition: all 0.3s ease;
+}
+
+.upload-button:hover {
+  
+}
+
+/* Add responsive styles for drag overlay */
+@media (max-width: 700px) {
+  .drag-content {
+    padding: 1.5rem;
+  }
+  
+  .drag-icon {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .drag-text {
+    font-size: 1.2rem;
+  }
+}
+
+/* Basic drag-over styles */
+.canvas-container.drag-over {
+  border: 2px solid #4CAF50;
+  transition: all 0.2s ease;
+}
+
+.upload-button {
+  transition: all 0.3s ease;
+}
+
+.upload-button:hover {
+ ;
 }
 </style>
