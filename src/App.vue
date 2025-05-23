@@ -3013,10 +3013,7 @@ html, body, #app {
   font-size: clamp(0.95em, 1em, 1em);
 }
 
-.batch-grid {
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-}
+
 
 .batch-item {
   border-radius: 12px;
